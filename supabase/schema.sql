@@ -7,7 +7,6 @@
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
-CREATE EXTENSION IF NOT EXISTS "timescaledb" CASCADE; -- for time-series if available
 
 -- ============================================================
 -- ENUM TYPES
@@ -202,7 +201,7 @@ CREATE INDEX idx_alerts_severity ON alerts(severity, created_at DESC);
 CREATE TABLE incidents (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   plant_id UUID REFERENCES plants(id) ON DELETE CASCADE NOT NULL,
-  incident_number TEXT UNIQUE NOT NULL DEFAULT 'INC-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(CAST(FLOOR(RANDOM() * 9999) AS TEXT), 4, '0'),
+  incident_number TEXT UNIQUE NOT NULL DEFAULT 'INC-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(CAST(EXTRACT(EPOCH FROM NOW())::BIGINT % 10000 AS TEXT), 4, '0'),
   title TEXT NOT NULL,
   description TEXT,
   severity alert_severity DEFAULT 'info',
@@ -239,7 +238,7 @@ CREATE INDEX idx_incidents_severity ON incidents(severity, created_at DESC);
 
 CREATE TABLE work_orders (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  wo_number TEXT UNIQUE NOT NULL DEFAULT 'WO-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(CAST(FLOOR(RANDOM() * 9999) AS TEXT), 4, '0'),
+  wo_number TEXT UNIQUE NOT NULL DEFAULT 'WO-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(CAST(EXTRACT(EPOCH FROM NOW())::BIGINT % 10000 AS TEXT), 4, '0'),
   equipment_id UUID REFERENCES equipment(id) ON DELETE SET NULL,
   plant_id UUID REFERENCES plants(id) NOT NULL,
   title TEXT NOT NULL,
