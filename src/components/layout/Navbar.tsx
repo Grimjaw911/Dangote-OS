@@ -13,7 +13,6 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { timeAgo, getSeverityColor, getInitials } from "@/lib/utils/format";
 import { DEMO_PLANTS } from "@/data/demo";
 import type { Notification } from "@/types";
@@ -36,7 +35,7 @@ function NotificationItem({
     >
       <div className={cn("w-2 h-2 rounded-full mt-1 flex-shrink-0", dotColor[notification.severity] || "bg-blue-500")} />
       <div className="flex-1 min-w-0">
-        <p className={cn("text-xs font-medium", notification.is_read ? "text-muted-foreground" : "text-foreground")}>
+        <p className={cn("text-xs font-medium truncate", notification.is_read ? "text-muted-foreground" : "text-foreground")}>
           {notification.title}
         </p>
         <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{notification.message}</p>
@@ -151,9 +150,10 @@ export function Navbar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -8, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-10 w-80 z-50 rounded-xl border border-border bg-card shadow-xl shadow-black/20"
+                  className="absolute right-0 top-10 w-80 z-50 flex flex-col rounded-xl border border-border bg-card shadow-xl shadow-black/20 overflow-hidden max-h-[min(480px,80vh)]"
                 >
-                  <div className="flex items-center justify-between p-3 border-b border-border">
+                  {/* Fixed header */}
+                  <div className="shrink-0 flex items-center justify-between p-3 border-b border-border">
                     <h3 className="text-sm font-semibold">Notifications</h3>
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
@@ -166,7 +166,8 @@ export function Navbar() {
                       </button>
                     </div>
                   </div>
-                  <ScrollArea className="max-h-80">
+                  {/* Scrollable list */}
+                  <div className="overflow-y-auto min-h-0">
                     <div className="p-2 space-y-1">
                       {notifications.length === 0 ? (
                         <p className="text-center text-sm text-muted-foreground py-6">No notifications</p>
@@ -176,7 +177,7 @@ export function Navbar() {
                         ))
                       )}
                     </div>
-                  </ScrollArea>
+                  </div>
                 </motion.div>
               </>
             )}
