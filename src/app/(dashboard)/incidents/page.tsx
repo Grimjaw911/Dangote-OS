@@ -11,14 +11,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { DEMO_INCIDENTS, DEMO_ALERTS } from "@/data/demo";
 import { timeAgo, formatDateTime, getSeverityColor, getStatusColor } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import type { Incident } from "@/types";
 import { useAlertsStore } from "@/store";
+import { toast } from "sonner";
 
 function IncidentCard({
   incident,
@@ -99,23 +104,71 @@ function IncidentCard({
   );
 }
 
+const EMPTY_INCIDENT_FORM = {
+  title: "",
+  type: "safety_violation" as Incident["type"],
+  severity: "warning" as Incident["severity"],
+  location: "",
+  reporter_name: "",
+  description: "",
+};
+
 export default function IncidentsPage() {
   const [selectedId, setSelectedId] = useState<string>("inc-1");
   const [search, setSearch] = useState("");
+  const [incidents, setIncidents] = useState<Incident[]>(DEMO_INCIDENTS);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_INCIDENT_FORM);
   const { alerts, acknowledgeAlert } = useAlertsStore();
 
-  const selectedIncident = DEMO_INCIDENTS.find((i) => i.id === selectedId);
+  const selectedIncident = incidents.find((i) => i.id === selectedId);
 
-  const filteredIncidents = DEMO_INCIDENTS.filter(
+  const filteredIncidents = incidents.filter(
     (i) =>
       i.title.toLowerCase().includes(search.toLowerCase()) ||
       i.incident_number.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openCount = DEMO_INCIDENTS.filter((i) => i.status === "open").length;
-  const investigatingCount = DEMO_INCIDENTS.filter((i) => i.status === "investigating").length;
-  const emergencyCount = DEMO_INCIDENTS.filter((i) => i.severity === "emergency").length;
+  const openCount = incidents.filter((i) => i.status === "open").length;
+  const investigatingCount = incidents.filter((i) => i.status === "investigating").length;
+  const emergencyCount = incidents.filter((i) => i.severity === "emergency").length;
   const unackAlerts = alerts.filter((a) => !a.is_acknowledged).length;
+
+  function handleReportIncident(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.title.trim() || !form.location.trim() || !form.reporter_name.trim()) return;
+    const now = new Date().toISOString();
+    const newIncident: Incident = {
+      id: `inc-${Date.now()}`,
+      incident_number: `INC-${new Date().getFullYear()}-${String(incidents.length + 1).padStart(4, "0")}`,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      severity: form.severity,
+      status: "open",
+      type: form.type,
+      plant_id: "plant-1",
+      location: form.location.trim(),
+      reported_by: "current-user",
+      reporter_name: form.reporter_name.trim(),
+      escalation_level: 1,
+      timeline: [{
+        id: `tl-${Date.now()}`,
+        incident_id: `inc-${Date.now()}`,
+        type: "created",
+        description: "Incident reported",
+        user_id: "current-user",
+        user_name: form.reporter_name.trim(),
+        timestamp: now,
+      }],
+      created_at: now,
+      updated_at: now,
+    };
+    setIncidents((prev) => [newIncident, ...prev]);
+    setSelectedId(newIncident.id);
+    toast.success(`Incident ${newIncident.incident_number} reported`);
+    setReportDialogOpen(false);
+    setForm(EMPTY_INCIDENT_FORM);
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -127,7 +180,7 @@ export default function IncidentsPage() {
             Track, investigate, and resolve operational incidents
           </p>
         </div>
-        <Button size="sm" className="gap-2">
+        <Button size="sm" className="gap-2" onClick={() => setReportDialogOpen(true)}>
           <Plus className="w-4 h-4" />
           Report Incident
         </Button>
@@ -334,6 +387,106 @@ export default function IncidentsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Report Incident Dialog */}
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Report Incident</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleReportIncident} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="inc-title" className="text-xs">Title *</Label>
+              <Input
+                id="inc-title"
+                placeholder="Brief description of the incident"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                className="h-9 text-sm"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="inc-type" className="text-xs">Type *</Label>
+                <select
+                  id="inc-type"
+                  value={form.type}
+                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as Incident["type"] }))}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="equipment_failure">Equipment Failure</option>
+                  <option value="safety_violation">Safety Violation</option>
+                  <option value="security_breach">Security Breach</option>
+                  <option value="environmental">Environmental</option>
+                  <option value="process">Process</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="inc-severity" className="text-xs">Severity *</Label>
+                <select
+                  id="inc-severity"
+                  value={form.severity}
+                  onChange={(e) => setForm((f) => ({ ...f, severity: e.target.value as Incident["severity"] }))}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="critical">Critical</option>
+                  <option value="emergency">Emergency</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="inc-location" className="text-xs">Location *</Label>
+                <Input
+                  id="inc-location"
+                  placeholder="e.g. Kiln Bay 1"
+                  value={form.location}
+                  onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                  className="h-9 text-sm"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="inc-reporter" className="text-xs">Reported By *</Label>
+                <Input
+                  id="inc-reporter"
+                  placeholder="Your name"
+                  value={form.reporter_name}
+                  onChange={(e) => setForm((f) => ({ ...f, reporter_name: e.target.value }))}
+                  className="h-9 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="inc-desc" className="text-xs">Description</Label>
+              <textarea
+                id="inc-desc"
+                rows={3}
+                placeholder="Describe what happened..."
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="submit" variant="destructive" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Report Incident
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

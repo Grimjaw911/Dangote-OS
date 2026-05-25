@@ -13,6 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { SensorChart } from "@/components/charts/SensorChart";
 import { ProductionBarChart } from "@/components/charts/ProductionChart";
@@ -20,12 +25,13 @@ import {
   DEMO_EQUIPMENT, DEMO_WORK_ORDERS, DEMO_MAINTENANCE_LOGS,
   generateSensorData,
 } from "@/data/demo";
+import { toast } from "sonner";
 import {
   getHealthColor, getHealthBg, getSeverityColor, getStatusColor,
   timeAgo, formatDate,
 } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import type { Equipment, SensorReading } from "@/types";
+import type { Equipment, SensorReading, WorkOrder } from "@/types";
 
 function HealthBar({ score }: { score: number }) {
   return (
@@ -74,7 +80,7 @@ function EquipmentCard({
     >
       <div className="flex items-start gap-3">
         <div className={cn(
-          "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5",
+          "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
           equipment.status === "critical" ? "bg-red-500/10" :
           equipment.status === "warning" ? "bg-yellow-500/10" :
           "bg-muted"
@@ -89,7 +95,7 @@ function EquipmentCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <p className="text-xs font-semibold truncate">{equipment.name}</p>
-            <div className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />
+            <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", cfg.dot)} />
           </div>
           <p className="text-[10px] text-muted-foreground mb-2">{equipment.location}</p>
           <HealthBar score={equipment.health_score} />
@@ -164,10 +170,49 @@ function SensorGauge({
   );
 }
 
+const EMPTY_FORM = {
+  title: "",
+  equipment_id: "equip-1",
+  priority: "medium" as WorkOrder["priority"],
+  type: "preventive" as WorkOrder["type"],
+  assignee_name: "",
+  due_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+  description: "",
+};
+
 export default function MaintenancePage() {
   const [selectedEquipId, setSelectedEquipId] = useState("equip-1");
   const [sensorHistory, setSensorHistory] = useState<SensorReading[]>([]);
   const [liveReadings, setLiveReadings] = useState<SensorReading | null>(null);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(DEMO_WORK_ORDERS);
+  const [woDialogOpen, setWoDialogOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+
+  function handleCreateWO(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    const equip = DEMO_EQUIPMENT.find((eq) => eq.id === form.equipment_id)!;
+    const newWO: WorkOrder = {
+      id: `wo-${Date.now()}`,
+      wo_number: `WO-${new Date().getFullYear()}-${String(workOrders.length + 1).padStart(4, "0")}`,
+      equipment_id: form.equipment_id,
+      equipment_name: equip.name,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      type: form.type,
+      priority: form.priority,
+      status: "open",
+      assignee_name: form.assignee_name.trim() || undefined,
+      due_date: new Date(form.due_date).toISOString(),
+      created_by: "current-user",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setWorkOrders((prev) => [newWO, ...prev]);
+    toast.success(`Work order ${newWO.wo_number} created`);
+    setWoDialogOpen(false);
+    setForm(EMPTY_FORM);
+  }
 
   const selectedEquip = DEMO_EQUIPMENT.find((e) => e.id === selectedEquipId)!;
 
@@ -190,7 +235,7 @@ export default function MaintenancePage() {
   const avgHealth = Math.round(
     DEMO_EQUIPMENT.reduce((acc, e) => acc + e.health_score, 0) / DEMO_EQUIPMENT.length
   );
-  const openWO = DEMO_WORK_ORDERS.filter((w) => w.status !== "completed" && w.status !== "cancelled").length;
+  const openWO = workOrders.filter((w) => w.status !== "completed" && w.status !== "cancelled").length;
 
   // Format sensor history for chart
   const tempChartData = sensorHistory.map((r, i) => ({
@@ -231,7 +276,7 @@ export default function MaintenancePage() {
             AI-powered equipment health monitoring & failure prediction
           </p>
         </div>
-        <Button size="sm" className="gap-2">
+        <Button size="sm" className="gap-2" onClick={() => setWoDialogOpen(true)}>
           <Plus className="w-4 h-4" />
           New Work Order
         </Button>
@@ -281,7 +326,7 @@ export default function MaintenancePage() {
                   </div>
                   <p className="text-sm text-muted-foreground">{selectedEquip.location} • {selectedEquip.manufacturer} {selectedEquip.model_number}</p>
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-right shrink-0">
                   <p className={cn("text-3xl font-bold", getHealthColor(selectedEquip.health_score))}>
                     {selectedEquip.health_score}%
                   </p>
@@ -452,7 +497,7 @@ export default function MaintenancePage() {
 
             <TabsContent value="workorders" className="mt-4">
               <div className="space-y-2">
-                {DEMO_WORK_ORDERS.filter((wo) => wo.equipment_id === selectedEquipId || true).slice(0, 5).map((wo) => (
+                {workOrders.slice(0, 8).map((wo) => (
                   <div
                     key={wo.id}
                     className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-muted/30 transition-colors"
@@ -473,7 +518,7 @@ export default function MaintenancePage() {
                       <p className="text-xs font-medium mt-0.5 truncate">{wo.title}</p>
                       <p className="text-[10px] text-muted-foreground">{wo.equipment_name}</p>
                     </div>
-                    <div className="text-right flex-shrink-0 text-xs">
+                    <div className="text-right shrink-0 text-xs">
                       <p className="text-muted-foreground">Due</p>
                       <p className="font-medium">{formatDate(wo.due_date)}</p>
                       {wo.assignee_name && (
@@ -491,7 +536,7 @@ export default function MaintenancePage() {
                   <div key={log.id} className="p-3 rounded-xl border border-border bg-card">
                     <div className="flex items-start gap-3">
                       <div className={cn(
-                        "w-2 h-full min-h-[40px] rounded-full flex-shrink-0",
+                        "w-2 h-full min-h-[40px] rounded-full shrink-0",
                         log.type === "preventive" ? "bg-blue-500" :
                         log.type === "corrective" ? "bg-orange-500" :
                         log.type === "predictive" ? "bg-purple-500" :
@@ -534,6 +579,118 @@ export default function MaintenancePage() {
           </Tabs>
         </div>
       </div>
+
+      {/* New Work Order Dialog */}
+      <Dialog open={woDialogOpen} onOpenChange={setWoDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>New Work Order</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateWO} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="wo-title" className="text-xs">Title *</Label>
+              <Input
+                id="wo-title"
+                placeholder="e.g. Replace bearing on Crusher C2"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                className="h-9 text-sm"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="wo-equipment" className="text-xs">Equipment *</Label>
+                <select
+                  id="wo-equipment"
+                  value={form.equipment_id}
+                  onChange={(e) => setForm((f) => ({ ...f, equipment_id: e.target.value }))}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {DEMO_EQUIPMENT.map((eq) => (
+                    <option key={eq.id} value={eq.id}>{eq.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="wo-type" className="text-xs">Type *</Label>
+                <select
+                  id="wo-type"
+                  value={form.type}
+                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as WorkOrder["type"] }))}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="preventive">Preventive</option>
+                  <option value="corrective">Corrective</option>
+                  <option value="predictive">Predictive</option>
+                  <option value="emergency">Emergency</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="wo-priority" className="text-xs">Priority *</Label>
+                <select
+                  id="wo-priority"
+                  value={form.priority}
+                  onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as WorkOrder["priority"] }))}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="wo-due" className="text-xs">Due Date *</Label>
+                <Input
+                  id="wo-due"
+                  type="date"
+                  value={form.due_date}
+                  onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
+                  className="h-9 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="wo-assignee" className="text-xs">Assigned To</Label>
+              <Input
+                id="wo-assignee"
+                placeholder="Technician name (optional)"
+                value={form.assignee_name}
+                onChange={(e) => setForm((f) => ({ ...f, assignee_name: e.target.value }))}
+                className="h-9 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="wo-desc" className="text-xs">Description</Label>
+              <textarea
+                id="wo-desc"
+                rows={3}
+                placeholder="Describe the work to be done..."
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="submit" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Create Work Order
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
