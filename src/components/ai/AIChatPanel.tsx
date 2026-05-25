@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Bot, User, Loader2, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUIStore, useAIChatStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/utils/format";
@@ -114,7 +113,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
     >
       <div
         className={cn(
-          "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
+          "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1",
           isAssistant ? "bg-primary/20 border border-primary/30" : "bg-muted border border-border"
         )}
       >
@@ -254,23 +253,23 @@ export function AIChatPanel() {
               </Button>
             </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+            {/* Messages — only this section scrolls */}
+            <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4">
               <div className="space-y-4">
                 {messages.map((msg) => (
                   <ChatBubble key={msg.id} message={msg} />
                 ))}
               </div>
-            </ScrollArea>
+            </div>
 
-            {/* Quick prompts */}
-            <div className="px-4 pb-2">
+            {/* Quick prompts — fixed, no scroll */}
+            <div className="shrink-0 px-4 pb-2">
               <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                 {QUICK_PROMPTS.map((prompt) => (
                   <button
                     key={prompt}
                     onClick={() => sendMessage(prompt)}
-                    className="flex-shrink-0 text-[10px] px-2.5 py-1.5 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors border border-border"
+                    className="shrink-0 text-[10px] px-2.5 py-1.5 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors border border-border"
                   >
                     {prompt}
                   </button>
@@ -278,8 +277,8 @@ export function AIChatPanel() {
               </div>
             </div>
 
-            {/* Input */}
-            <div className="p-4 border-t border-border">
+            {/* Input — fixed, no scroll */}
+            <div className="shrink-0 p-4 border-t border-border">
               <div className="flex gap-2 items-end">
                 <div className="flex-1 relative">
                   <textarea
@@ -301,7 +300,7 @@ export function AIChatPanel() {
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}
                   size="icon"
-                  className="w-10 h-10 rounded-xl flex-shrink-0"
+                  className="w-10 h-10 rounded-xl shrink-0"
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
