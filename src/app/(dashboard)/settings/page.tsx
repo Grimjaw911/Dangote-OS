@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Settings, Bell, Shield, Database, Cpu, Globe,
   Moon, Sun, Monitor, Save, RefreshCw, Zap, Mail,
@@ -15,12 +15,25 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useUIStore } from "@/store";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+type Theme = "dark" | "light" | "system";
+
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
+  const [theme, setThemeState] = useState<Theme>("dark");
+
+  useEffect(() => {
+    const saved = (localStorage.getItem("theme") as Theme | null) ?? "dark";
+    setThemeState(saved);
+  }, []);
+
+  function setTheme(t: Theme) {
+    setThemeState(t);
+    localStorage.setItem("theme", t);
+    const isDark = t === "dark" || (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", isDark);
+  }
   const [notifications, setNotifications] = useState({
     email: true, push: true, whatsapp: false, criticalOnly: false,
   });
@@ -68,7 +81,7 @@ export default function SettingsPage() {
                     return (
                       <button
                         key={t.value}
-                        onClick={() => setTheme(t.value)}
+                        onClick={() => setTheme(t.value as Theme)}
                         className={cn(
                           "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-all",
                           theme === t.value

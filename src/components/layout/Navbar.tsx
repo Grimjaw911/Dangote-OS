@@ -1,17 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, Search, Sun, Moon, Monitor, ChevronDown,
   LogOut, User, Settings, Shield, X, Check, MessageSquareText,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useUIStore, useAuthStore, useNotificationsStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,8 +47,28 @@ function NotificationItem({
   );
 }
 
+type Theme = "dark" | "light" | "system";
+
+function applyTheme(t: Theme) {
+  const isDark = t === "dark" || (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.classList.toggle("dark", isDark);
+  localStorage.setItem("theme", t);
+}
+
 export function Navbar() {
-  const { theme, setTheme } = useTheme();
+  const [theme, setThemeState] = useState<Theme>("dark");
+
+  useEffect(() => {
+    const saved = (localStorage.getItem("theme") as Theme | null) ?? "dark";
+    setThemeState(saved);
+    applyTheme(saved);
+  }, []);
+
+  function setTheme(t: Theme) {
+    setThemeState(t);
+    applyTheme(t);
+  }
+
   const { setCommandPaletteOpen, setAiChatOpen, selectedPlant, setSelectedPlant } = useUIStore();
   const { user } = useAuthStore();
   const { notifications, unreadCount, markRead, markAllRead } = useNotificationsStore();
@@ -72,7 +91,9 @@ export function Navbar() {
           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-72">
-          <DropdownMenuLabel>Switch Plant</DropdownMenuLabel>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Switch Plant</DropdownMenuLabel>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           {DEMO_PLANTS.map((plant) => (
             <DropdownMenuItem key={plant.id} onClick={() => setSelectedPlant(plant.id)} className="flex items-center gap-3">
@@ -165,7 +186,7 @@ export function Navbar() {
         {/* Theme toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors outline-none">
-            {theme === "dark" ? <Moon className="w-4 h-4" /> : theme === "light" ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
+            {theme === "light" ? <Sun className="w-4 h-4" /> : theme === "system" ? <Monitor className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setTheme("light")}><Sun className="w-4 h-4 mr-2" /> Light</DropdownMenuItem>
@@ -189,7 +210,9 @@ export function Navbar() {
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">{user?.email || "admin@dangote.com"}</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">{user?.email || "admin@dangote.com"}</DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem><User className="w-3.5 h-3.5 mr-2" /> Profile</DropdownMenuItem>
             <DropdownMenuItem><Shield className="w-3.5 h-3.5 mr-2" /> Security</DropdownMenuItem>
