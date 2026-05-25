@@ -1,4 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dangote Predictive Maintenance & Surveillance OS
+
+Enterprise-grade AI-powered industrial operations platform for cement plants, manufacturing facilities, logistics yards, and power plants.
+
+## Demo Login
+
+| Email | Role | Password |
+|-------|------|----------|
+| admin@dangote.com | Admin | admin123 |
+| engineer@dangote.com | Maintenance Engineer | admin123 |
+| security@dangote.com | Security Officer | admin123 |
+
+## Quick Start
+
+```bash
+npm install
+cp .env.example .env.local  # add your Supabase credentials
+npm run dev
+```
+
+Run the SQL in `supabase/schema.sql` in your Supabase project.
+
+## Modules
+
+- **Command Center** — Global ops overview, live KPIs, AI insights
+- **AI Surveillance** — Canvas-simulated camera feeds, AI detection overlays, PPE/fire/intrusion alerts
+- **Predictive Maintenance** — Equipment health, sensor charts, anomaly detection, work orders
+- **Incident Management** — AI-generated summaries, escalation, timeline
+- **Analytics** — Production, safety, energy, maintenance dashboards
+- **Reports** — PDF/Excel generation, scheduled reports
+- **AI Assistant** — DangoteAI chatbot with industrial knowledge
+- **User Management** — RBAC with 6 operational roles
+
+## Tech Stack
+
+Next.js 15, React 19, TypeScript, TailwindCSS, shadcn/ui, Framer Motion, Recharts, Zustand, Supabase, TensorFlow.js
 
 ## Getting Started
 
